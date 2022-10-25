@@ -245,13 +245,15 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
     if num_dets_to_consider == 0:
         return img_numpy
 
+    for (h, w) in zip(x, y):
+        cv2.circle(img_numpy, (w, h), radius=0, color=(255, 0, 0), thickness=-1)
+
     if args.display_text or args.display_bboxes:
         for j in reversed(range(num_dets_to_consider)):
             x1, y1, x2, y2 = boxes[j, :]
             color = get_color(j)
             score = scores[j]
-            for (h, w) in zip(x, y):
-                cv2.circle(img_numpy, (w, h), radius=0, color=(255, 0, 0), thickness=-1)
+
             if args.display_bboxes:
                 cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
                 # cv2.line(img_numpy,(x[0],y[0]),(x[100],y[100]),color,1)
