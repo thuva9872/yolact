@@ -197,7 +197,9 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
         print("mask coordinates")
         print(x)
         print(y)
-
+        with open('mask.txt', 'w') as my_file:
+            for i in x,y:
+                np.savetxt(my_file, i)
         # Prepare the RGB images for each mask given their color (size [num_dets, h, w, 1])
         colors = torch.cat([get_color(j, on_gpu=img_gpu.device.index).view(1, 1, 1, 3) for j in range(num_dets_to_consider)], dim=0)
         masks_color = masks.repeat(1, 1, 1, 3) * colors * mask_alpha
