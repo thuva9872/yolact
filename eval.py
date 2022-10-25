@@ -253,6 +253,8 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
             if args.display_bboxes:
                 cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
                 cv2.line(img_numpy,(x[0],y[0]),(x[100],y[100]),color,1)
+                for (i,j) in zip(x,y):
+                    cv2.circle(img_numpy, (i, j), radius=0, color=(0, 0, 255), thickness=-1)
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
                 text_str = '%s: %.2f' % (_class, score) if args.display_scores else _class
