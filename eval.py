@@ -256,12 +256,19 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
 
             if args.display_bboxes:
                 cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
-                xy = list(zip(y, x))
-                xyw = [i for i in xy if i[0] > 14 * w / 15]
-                xyh = [i for i in xy if i[1] > 14 * h / 15]
-                x1y1 = max(xyw)
-                x2y2 = max(xyh)
-                cv2.line(img_numpy,x1y1,x2y2,(255,0,0),2)
+                rec_start=min((x1,y1),(x2,y2))
+                rec_finish=max((x1,y1),(x2,y2))
+                if rec_finish[0]<w/2:
+                    xy = list(zip(y, x))
+                    xyw = [(i[1], i[0]) for i in xy if i[0] > rec_finish[0]- (rec_finish[0]-rec_start[0]) / 20]
+                    xyh = [i for i in xy if i[1] > rec_start[1]- (rec_start[1]-rec_finish[1]) / 20]
+                    x1y1 = max(xyw)
+                    x2y2 = max(xyh)
+                    m = (x2y2[1] - x1y1[0]) / (x2y2[0] - x1y1[1])
+                    c = x2y2[1] - m * x2y2[0]
+                    x1y1 = (int((rec_start[1] - c) / m), rec_start[1])
+                    x2y2 = (rec_finish[0], int(m * rec_finish[0] + c))
+                    cv2.line(img_numpy,x1y1,x2y2,(255,0,0),2)
 
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
