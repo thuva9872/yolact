@@ -192,12 +192,8 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
         mask_out = (masks.sum(dim=0) >= 1).float().expand(-1, -1, 3).contiguous()
         mask_out_1 = mask_out.cpu().numpy()
         indices = np.where(mask_out_1[:, :, :] == 1)
-        x = indices[0][:]
-        y = indices[1][:]
-        print(masks)
-        print("mask coordinates")
-        print(x)
-        print(y)
+        y = indices[0][:]
+        x = indices[1][:]
         with open('mask_x.txt', 'w') as my_file:
                 np.savetxt(my_file, x)
         with open('mask_y.txt', 'w') as my_file:
@@ -256,19 +252,30 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
 
             if args.display_bboxes:
                 cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
-                rec_start=min((x1,y1),(x2,y2))
-                rec_finish=max((x1,y1),(x2,y2))
-                if rec_finish[0]<w/2:
-                    xy = list(zip(y, x))
-                    xyw = [(i[1], i[0]) for i in xy if i[0] > rec_finish[0]- (rec_finish[0]-rec_start[0]) / 20]
-                    xyh = [i for i in xy if i[1] > rec_start[1]- (rec_start[1]-rec_finish[1]) / 20]
+                xy = list(zip(y, x))
+                xyw = []
+                xyh = []
+                print("loop start")
+                # for i in xy:
+                #   if(i[0]>8*w/10):
+                #     xyw.append(i)
+                #   if(i[1]>8*h/10):
+                #     xyh.append((i[1],i[0]))
+                wlimit = x2 - (x2 - x1) / 20
+                hlimit = y2 - (y2 - y1) / 20
+                xyw = [(i[1], i[0]) for i in xy if i[0] > wlimit]
+                xyh = [i for i in xy if i[1] > hlimit]
+                print("loop finish")
+                if (xyw != [] and xyh != []):
                     x1y1 = max(xyw)
                     x2y2 = max(xyh)
-                    m = (x2y2[1] - x1y1[0]) / (x2y2[0] - x1y1[1])
-                    c = x2y2[1] - m * x2y2[0]
-                    x1y1 = (int((rec_start[1] - c) / m), rec_start[1])
-                    x2y2 = (rec_finish[0], int(m * rec_finish[0] + c))
-                    cv2.line(img_numpy,x1y1,x2y2,(255,0,0),2)
+                    x1y1 = (x1y1[1], x1y1[0])
+                    if (x1y1 != x2y2):
+                        m = (x2y2[1] - x1y1[1]) / (x2y2[0] - x1y1[0])
+                        c = x2y2[1] - m * x2y2[0]
+                        x1y1 = (int((y2 - c) / m), y2)
+                        x2y2 = (x2, int(m * x2 + c))
+                        cv2.line(img_numpy, x1y1, x2y2, (255, 0, 0), 2)
 
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
