@@ -261,7 +261,7 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
                 xyh = [i for i in xy if i[1] > 14 * h / 15]
                 x1y1 = max(xyw)
                 x2y2 = max(xyh)
-                cv2.line(img_numpy,x1y1,x2y2,color,1)
+                cv2.line(img_numpy,x1y1,x2y2,(255,0,0),2)
 
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
