@@ -250,61 +250,52 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
             x1, y1, x2, y2 = boxes[j, :]
             color = get_color(j)
             score = scores[j]
-            xalpha = 0.5
-            yalpha = 0.5
-            a = y1 + int((y2 - y1) * yalpha)
-            b = x1 + int((x2 - x1) * xalpha)
-            mask_out_1 = mask_out_1[a:, b:, :]
-            # mask_out_1=mask_out_1[h//2:,w//2:,:]
+            x1alpha = 0.5
+            y1alpha = 0.95
+            x2alpha=0.95
+            y2alpha=0.5
+            def get_coord(mask,x1alpha,y1alpha,x2alpha,y2alpha):
+              a1 = y1 + int((y2 - y1) * y1alpha)
+              b1 = x1 + int((x2 - x1) * x1alpha)
+              a2 = y1 + int((y2 - y1) * y2alpha)
+              b2 = x1 + int((x2 - x1) * x2alpha)
+              mask_out_2 = mask[a1:, b1:, :]
+              mask_out_3 = mask[a2:, b2:, :]
+              indices1 = np.where(mask_out_2[:, :, :] == 1)
+              indices2 = np.where(mask_out_3[:, :, :] == 1)
+              i1y = indices1[0][:]
+              i1x = indices1[1][:]
+              i2y = indices2[0][:]
+              i2x = indices2[1][:]
+              if(len(i1x)==0 and len(i2x)==0):
+                return get_coord(mask,x1alpha,y1alpha-0.2,x2alpha-0.2,y2alpha)
+              elif(len(i1x)==0):
+                return get_coord(mask,x1alpha,y1alpha-0.2,x2alpha,y2alpha)
+              elif(len(i2x)==0):
+                return get_coord(mask,x1alpha,y1alpha,x2alpha-0.2,y2alpha)
+              else:return i1y,i1x,a1,b1,i2y,i2x,a2,b2
+            i1y,i1x,a1,b1,i2y,i2x,a2,b2=get_coord(mask_out_1,x1alpha,y1alpha,x2alpha,y2alpha)
+            yxw=list(zip(i1y,i1x))
+            yxh=list(zip(i2y,i2x))
+            # for y_,x_ in yxw:
+            #   cv2.circle(img_numpy, (x_ + b1, y_ + a1), radius=0, color=(0, 0, 255), thickness=-1)
+            # for y_,x_ in yxh:
+            #   cv2.circle(img_numpy, (x_ + b2, y_ + a2), radius=0, color=(0, 255,0 ), thickness=-1)
 
-            indices = np.where(mask_out_1[:, :, :] == 1)
-            y = indices[0][:]
-            x = indices[1][:]
-            if (len(y) == 0):
-                xalpha = 0.4
-                yalpha = 0.4
-                a = y1 + int((y2 - y1) * yalpha)
-                b = x1 + int((x2 - x1) * xalpha)
-                mask_out_1 = mask_out_1[a:, b:, :]
-                # mask_out_1=mask_out_1[h//2:,w//2:,:]
-
-                indices = np.where(mask_out_1[:, :, :] == 1)
-                y = indices[0][:]
-                x = indices[1][:]
-            for (k, m) in zip(x, y):
-                cv2.circle(img_numpy, (k + b, m + a), radius=0, color=(0, 0, 255), thickness=-1)
+            x1y1=max(yxw)
+            x2y2=max(yxh)
+            x1y1=(x1y1[1]+b1,x1y1[0]+a1)
+            x2y2=(x2y2[1]+b2,x2y2[0]+a2)
+            print((x1y1,x2y2))
+            if(x1y1!=x2y2 and x1y1[1]!=x2y2[1]):
+              m = (x2y2[1] - x1y1[1]) / (x2y2[0] - x1y1[0])
+              c = x2y2[1] - m * (x2y2[0])
+              x1y1 = (int((y2 - c) / m), y2)
+              x2y2 = (x2, int(m * x2 + c))
+              cv2.line(img_numpy, x1y1, x2y2, (255, 0, 0), 2)
 
             if args.display_bboxes:
                 cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
-                # x=x[len(x)//2:]
-                # y=y[len(y)//2:]
-                xy = list(zip(x, y))
-                print("loop start")
-                # for i in xy:
-                #   if(i[0]>8*w/10):
-                #     xyw.append(i)
-                #   if(i[1]>8*h/10):
-                #     xyh.append((i[1],i[0]))
-                # wlimit=x2-(x2-x1)/20
-                # hlimit=y2-(y2-y1)/20
-                if (x2 < w / 2 or True):
-                    print(len(xy))
-                    wlimit = (x2 - x1) / 4
-                    hlimit = (y2 - y1) / 4
-                    xyw = [i for i in xy if i[0] > wlimit]
-                    xyh = [(i[1], i[0]) for i in xy if i[1] > hlimit]
-                    print("loop finish")
-                    if (xyw != [] and xyh != []):
-                        x1y1 = max(xyw)
-                        x2y2 = max(xyh)
-                        x1y1 = (x1y1[0] + b, x1y1[1] + a)
-                        x2y2 = (x2y2[1] + b, x2y2[0] + a)
-                        if (x1y1 != x2y2):
-                            m = (x2y2[1] - x1y1[1]) / (x2y2[0] - x1y1[0])
-                            c = x2y2[1] - m * (x2y2[0])
-                            x1y1 = (int((y2 - c) / m), y2)
-                            x2y2 = (x2, int(m * x2 + c))
-                            cv2.line(img_numpy, x1y1, x2y2, (255, 0, 0), 2)
 
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
