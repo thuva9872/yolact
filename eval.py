@@ -203,23 +203,23 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
         # with open('mask_y.txt', 'w') as my_file:
         #         np.savetxt(my_file,y)
         # Prepare the RGB images for each mask given their color (size [num_dets, h, w, 1])
-        colors = torch.cat(
-            [get_color(j, on_gpu=img_gpu.device.index).view(1, 1, 1, 3) for j in range(num_dets_to_consider)], dim=0)
-        masks_color = masks.repeat(1, 1, 1, 3) * colors * mask_alpha
+        # colors = torch.cat(
+        #     [get_color(j, on_gpu=img_gpu.device.index).view(1, 1, 1, 3) for j in range(num_dets_to_consider)], dim=0)
+        # masks_color = masks.repeat(1, 1, 1, 3) * colors * mask_alpha
 
-        # This is 1 everywhere except for 1-mask_alpha where the mask is
-        inv_alph_masks = masks * (-mask_alpha) + 1
+        # # This is 1 everywhere except for 1-mask_alpha where the mask is
+        # inv_alph_masks = masks * (-mask_alpha) + 1
 
-        # I did the math for this on pen and paper. This whole block should be equivalent to:
-        #    for j in range(num_dets_to_consider):
-        #        img_gpu = img_gpu * inv_alph_masks[j] + masks_color[j]
-        masks_color_summand = masks_color[0]
-        if num_dets_to_consider > 1:
-            inv_alph_cumul = inv_alph_masks[:(num_dets_to_consider - 1)].cumprod(dim=0)
-            masks_color_cumul = masks_color[1:] * inv_alph_cumul
-            masks_color_summand += masks_color_cumul.sum(dim=0)
+        # # I did the math for this on pen and paper. This whole block should be equivalent to:
+        # #    for j in range(num_dets_to_consider):
+        # #        img_gpu = img_gpu * inv_alph_masks[j] + masks_color[j]
+        # masks_color_summand = masks_color[0]
+        # if num_dets_to_consider > 1:
+        #     inv_alph_cumul = inv_alph_masks[:(num_dets_to_consider - 1)].cumprod(dim=0)
+        #     masks_color_cumul = masks_color[1:] * inv_alph_cumul
+        #     masks_color_summand += masks_color_cumul.sum(dim=0)
 
-        img_gpu = img_gpu * inv_alph_masks.prod(dim=0) + masks_color_summand
+        # img_gpu = img_gpu * inv_alph_masks.prod(dim=0) + masks_color_summand
 
     if args.display_fps:
         # Draw the box for the fps on the GPU
@@ -250,50 +250,58 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
             x1, y1, x2, y2 = boxes[j, :]
             color = get_color(j)
             score = scores[j]
-            x1alpha = 0.5
-            y1alpha = 0.95
-            x2alpha=0.95
-            y2alpha=0.5
-            def get_coord(mask,x1alpha,y1alpha,x2alpha,y2alpha):
-              a1 = y1 + int((y2 - y1) * y1alpha)
-              b1 = x1 + int((x2 - x1) * x1alpha)
-              a2 = y1 + int((y2 - y1) * y2alpha)
-              b2 = x1 + int((x2 - x1) * x2alpha)
-              mask_out_2 = mask[a1:, b1:, :]
-              mask_out_3 = mask[a2:, b2:, :]
-              indices1 = np.where(mask_out_2[:, :, :] == 1)
-              indices2 = np.where(mask_out_3[:, :, :] == 1)
-              i1y = indices1[0][:]
-              i1x = indices1[1][:]
-              i2y = indices2[0][:]
-              i2x = indices2[1][:]
-              if(len(i1x)==0 and len(i2x)==0):
-                return get_coord(mask,x1alpha,y1alpha-0.2,x2alpha-0.2,y2alpha)
-              elif(len(i1x)==0):
-                return get_coord(mask,x1alpha,y1alpha-0.2,x2alpha,y2alpha)
-              elif(len(i2x)==0):
-                return get_coord(mask,x1alpha,y1alpha,x2alpha-0.2,y2alpha)
-              else:return i1y,i1x,a1,b1,i2y,i2x,a2,b2
-            i1y,i1x,a1,b1,i2y,i2x,a2,b2=get_coord(mask_out_1,x1alpha,y1alpha,x2alpha,y2alpha)
-            yxw=list(zip(i1y,i1x))
-            yxh=list(zip(i2y,i2x))
-            # for y_,x_ in yxw:
-            #   cv2.circle(img_numpy, (x_ + b1, y_ + a1), radius=0, color=(0, 0, 255), thickness=-1)
-            # for y_,x_ in yxh:
-            #   cv2.circle(img_numpy, (x_ + b2, y_ + a2), radius=0, color=(0, 255,0 ), thickness=-1)
+            _class = cfg.dataset.class_names[classes[j]]
+            if(_class!="person"):
+              x1alpha = 0.5
+              y1alpha = 0.9
+              x2alpha=0.9
+              y2alpha=0.5
+              def get_coord(mask,x1alpha,y1alpha,x2alpha,y2alpha):
+                a1 = y1 + int((y2 - y1) * y1alpha)
+                b1 = x1 + int((x2 - x1) * x1alpha)
+                a2 = y1 + int((y2 - y1) * y2alpha)
+                b2 = x1 + int((x2 - x1) * x2alpha)
+                mask_out_2 = mask[a1:y2, b1:x2, :]
+                mask_out_3 = mask[a2:y2, b2:x2, :]
+                indices1 = np.where(mask_out_2[:, :, :] == 1)
+                indices2 = np.where(mask_out_3[:, :, :] == 1)
+                i1y = indices1[0][:]
+                i1x = indices1[1][:]
+                i2y = indices2[0][:]
+                i2x = indices2[1][:]
+                if(len(i1x)==0 and len(i2x)==0):
+                  return get_coord(mask,x1alpha,y1alpha-0.1,x2alpha-0.1,y2alpha)
+                elif(len(i1x)==0):
+                  return get_coord(mask,x1alpha,y1alpha-0.1,x2alpha,y2alpha)
+                elif(len(i2x)==0):
+                  return get_coord(mask,x1alpha,y1alpha,x2alpha-0.1,y2alpha)
+                else:return i1y,i1x,a1,b1,i2y,i2x,a2,b2
+              i1y,i1x,a1,b1,i2y,i2x,a2,b2=get_coord(mask_out_1,x1alpha,y1alpha,x2alpha,y2alpha)
+              yxw=list(zip(i1y,i1x))
+              yxh=list(zip(i2y,i2x))
+              # print((len(yxw),len(yxh)))
+              # for y_,x_ in yxw:
+              #   cv2.circle(img_numpy, (x_ + b1, y_ + a1), radius=0, color=(0, 0, 255), thickness=-1)
+              # for y_,x_ in yxh:
+              #   cv2.circle(img_numpy, (x_ + b2, y_ + a2), radius=0, color=(0, 255,0 ), thickness=-1)
 
-            x1y1=max(yxw)
-            x2y2=max(yxh)
-            x1y1=(x1y1[1]+b1,x1y1[0]+a1)
-            x2y2=(x2y2[1]+b2,x2y2[0]+a2)
-            print((x1y1,x2y2))
-            if(x1y1!=x2y2 and x1y1[1]!=x2y2[1]):
-              m = (x2y2[1] - x1y1[1]) / (x2y2[0] - x1y1[0])
-              c = x2y2[1] - m * (x2y2[0])
-              x1y1 = (int((y2 - c) / m), y2)
-              x2y2 = (x2, int(m * x2 + c))
-              cv2.line(img_numpy, x1y1, x2y2, (255, 0, 0), 2)
-
+              x1y1=max(yxw)
+              x2y2=max(yxh)
+              x1y1=(x1y1[1]+b1,x1y1[0]+a1)
+              x2y2=(x2y2[1]+b2,x2y2[0]+a2)
+              print((x1y1,x2y2))
+              if(x1y1!=x2y2 and x1y1[1]!=x2y2[1]):
+                m = (x2y2[1] - x1y1[1]) / (x2y2[0] - x1y1[0])
+                c = x2y2[1] - m * (x2y2[0])
+                x1y1 = (int((y2 - c) / m), y2)
+                x2y2 = (x2, int(m * x2 + c))
+                if(x2y2[1]<y1):
+                  x2y2=(x2y2[0],y1)
+                if(x1y1[0]<x1):
+                  x1y1=(x1,x1y1[1])
+                cv2.line(img_numpy, x1y1, x2y2, (255, 0, 0), 2)
+              else:
+                print("Same:"+_class)
             if args.display_bboxes:
                 cv2.rectangle(img_numpy, (x1, y1), (x2, y2), color, 1)
 
